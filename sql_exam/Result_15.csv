@@ -1,0 +1,40 @@
+CREATE INDEX SYSTEM.IX_T_CUST54_01 ON SYSTEM.T_CUST54(CUST_TYPE, CUST_NO);
+CREATE INDEX SYSTEM.IX_T_ORDER54_01 ON SYSTEM.T_ORDER54(CUST_NO, ORDER_TYPE, ORDER_DT);
+
+SELECT /*+ LEADING (C) USE_NL(H)*/ C.CUST_NO, C.CUST_NM, H.HOBBY_TYPE, H.C11
+FROM SYSTEM.T_CUST54 C,  SYSTEM.T_HOBBY54 H
+WHERE C.CUST_TYPE    = 'C050'
+    AND H.CUST_NO = C.CUST_NO
+    AND EXISTS (SELECT /*+ NO_UNNEST PUSH_SUBQ*/ 1
+        FROM SYSTEM.T_ORDER54 O
+        WHERE CUST_NO    = C.CUST_NO
+            AND  ORDER_TYPE = '001'
+            AND  ORDER_DT IS NULL);
+
+Plan hash value: 600117238
+ 
+---------------------------------------------------------------------------------------------------------
+| Id  | Operation                             | Name            | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                      |                 |    75 |  5250 |    79   (0)| 00:00:01 |
+|   1 |  NESTED LOOPS                         |                 |    75 |  5250 |    76   (0)| 00:00:01 |
+|   2 |   NESTED LOOPS                        |                 |    75 |  5250 |    76   (0)| 00:00:01 |
+|   3 |    TABLE ACCESS BY INDEX ROWID BATCHED| T_CUST54        |    25 |   900 |    28   (0)| 00:00:01 |
+|*  4 |     INDEX RANGE SCAN                  | IX_T_CUST54_01  |    25 |       |     3   (0)| 00:00:01 |
+|*  5 |      INDEX RANGE SCAN                 | IX_T_ORDER54_01 |    17 |   238 |     3   (0)| 00:00:01 |
+|*  6 |    INDEX RANGE SCAN                   | PK_HOBBY54      |     3 |       |     1   (0)| 00:00:01 |
+|   7 |   TABLE ACCESS BY INDEX ROWID         | T_HOBBY54       |     3 |   102 |     2   (0)| 00:00:01 |
+---------------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+"   4 - access(""C"".""CUST_TYPE""='C050')"
+"       filter( EXISTS (SELECT /*+ PUSH_SUBQ NO_UNNEST */ 0 FROM ""SYSTEM"".""T_ORDER54"" ""O"" WHERE "
+"              ""ORDER_DT"" IS NULL AND ""ORDER_TYPE""='001' AND ""CUST_NO""=:B1))"
+"   5 - access(""CUST_NO""=:B1 AND ""ORDER_TYPE""='001' AND ""ORDER_DT"" IS NULL)"
+"   6 - access(""H"".""CUST_NO""=""C"".""CUST_NO"")"
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)

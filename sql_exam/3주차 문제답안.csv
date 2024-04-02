@@ -1,0 +1,42 @@
+SELECT ORDER_NO, ORDER_CD,
+       ROUND(AVG(ORDER_AMT) OVER(PARTITION BY ORDER_CD)) 평균주문금액,
+       SUM(ORDER_AMT) OVER(PARTITION BY ORDER_CD)  주문합계금액
+FROM T_ORDER42
+ORDER BY ORDER_CD, ORDER_NO;
+
+Plan hash value: 210825038
+ 
+--------------------------------------------------------------------------------
+| Id  | Operation          | Name      | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |           |   100K|  1562K|   200   (1)| 00:00:01 |
+|   1 |  WINDOW SORT       |           |   100K|  1562K|   200   (1)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| T_ORDER42 |   100K|  1562K|   200   (1)| 00:00:01 |
+--------------------------------------------------------------------------------
+
+
+SELECT ORDER_NO, ORDER_CD, ORDER_DT, ORDER_AMT
+FROM (
+    SELECT ORDER_NO, ORDER_CD, ORDER_DT, ORDER_AMT,
+           ROW_NUMBER() OVER (PARTITION BY ORDER_CD ORDER BY ORDER_NO DESC) ORDER_ROW_NO
+    FROM T_ORDER42
+    )
+WHERE ORDER_ROW_NO = 1;
+
+Plan hash value: 3016059125
+
+----------------------------------------------------------------------------------------------
+| Id  | Operation                | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT         |           |  9380 |   375K|       |   902   (1)| 00:00:01 |
+|*  1 |  VIEW                    |           |  9380 |   375K|       |   902   (1)| 00:00:01 |
+|*  2 |   WINDOW SORT PUSHED RANK|           |   100K|  2343K|  3552K|   902   (1)| 00:00:01 |
+|   3 |    TABLE ACCESS FULL     | T_ORDER42 |   100K|  2343K|       |   200   (1)| 00:00:01 |
+----------------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+
+"   1 - filter(""ORDER_ROW_NO""=1)"
+"   2 - filter(ROW_NUMBER() OVER ( PARTITION BY ""ORDER_CD"" ORDER BY "
+"              INTERNAL_FUNCTION(""ORDER_NO"") DESC )<=1)"
